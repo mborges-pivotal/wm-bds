@@ -1,0 +1,31 @@
+##
+## columns list
+##
+#macro(listCols $cols_map $delimeter)
+#foreach( $key in $cols_map) ${key}#if($foreach.hasNext)${delimeter}#end#end
+#end
+
+##
+## The macros below helps extract subset of the columns - all, keys or nonkeys
+## Then call another marco with the subset. e.g. #@colsList( "#listCols($cols_keys ',')" )#end
+
+##
+## All Columns
+##
+#macro(colsList $func )
+#set($cols_keys = [])
+#foreach( $key in $cols_isKey.keySet())${cols_keys.add($cols_keys.size(),$key)}#end$func#end
+
+##
+## All Key Columns
+##
+#macro(keyColsList $func )
+#set($cols_keys = [])
+#foreach( $key in $cols_isKey.keySet())#if(${cols_isKey.get($key)})${cols_keys.add($cols_keys.size(),$key)}#end#end$func#end
+
+##
+## All Non Key Columns
+##
+#macro(NonKeyColsList $func )
+#set($cols_keys = [])
+#foreach( $key in $cols_isKey.keySet())#if(!${cols_isKey.get($key)})${cols_keys.add($cols_keys.size(),$key)}#end#end$func#end

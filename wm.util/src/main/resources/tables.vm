@@ -1,0 +1,56 @@
+## #set ($tablename = "DYNAMIC_BASKET")
+## #set ($cols_isKey = {"EVENT_ID":true, "BASKET_ID":true, "INSTANCE":true, "IMPACTED_AMOUNT":false, "EXPIRATION_DATE":false, "REMAINING_AMOUNT":false, "OFFER_CODE":false, "CALL_START":false})
+## #set ($cols_types = {"EVENT_ID":"DECIMAL(38)", "BASKET_ID":"VARCHAR(8)", "INSTANCE":"INTEGER","IMPACTED_AMOUNT":"DECIMAL(15,6)", "EXPIRATION_DATE":"TIMESTAMP", "REMAINING_AMOUNT":"DECIMAL", "OFFER_CODE":"VARCHAR(20)", "CALL_START":"TIMESTAMP"})
+
+#parse("macros.vm")
+
+--
+-- Append only table
+--
+CREATE TABLE ${tablename}_AO
+   (
+#@printCols($cols_types)#end,      
+      DELETED          BOOLEAN NOT NULL DEFAULT FALSE,
+      INSERT_ID        SERIAL NOT NULL,
+      NON_KEY_HASH     VARCHAR(32) NOT NULL,
+      LOAD_DATE        DATE DEFAULT current_date
+   )
+WITH (appendonly=true, COMPRESSTYPE=QUICKLZ)
+DISTRIBUTED RANDOMLY
+;
+
+--
+-- External table
+--
+CREATE EXTERNAL TABLE ${tablename}_EXT
+   (
+#@printCols($cols_types)#end
+
+   )
+LOCATION ('gpfdist://phd3:7171/${tablename}*.csv')
+FORMAT 'text' (delimiter E'|' null '' HEADER)
+LOG ERRORS INTO ERR_WM
+SEGMENT REJECT LIMIT 10 ROWS
+;
+
+--
+-- View
+--
+CREATE VIEW ${tablename}_VIEW AS
+SELECT #@colsList( "#listCols($cols_keys ',')" )#end, NON_KEY_HASH
+FROM    (
+        SELECT #@colsList( "#listCols($cols_keys ',')" )#end, NON_KEY_HASH, ROW_NUMBER() 
+          OVER (PARTITION BY #@keyColsList( "#listCols($cols_keys ',')" )#end ORDER BY INSERT_ID DESC) AS ROWNUM, DELETED
+          FROM ${tablename}_AO
+        ) AS SUB
+WHERE ROWNUM = 1 AND NOT DELETED; 
+
+##
+## table column definitions
+##
+#macro(printCols $cols_map)
+  #foreach( $key in $cols_map.keySet()) 
+${key}   ${cols_map.get($key)}#if($foreach.hasNext),
+#end
+  #end
+#end

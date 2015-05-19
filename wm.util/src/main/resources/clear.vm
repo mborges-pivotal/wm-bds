@@ -1,0 +1,9 @@
+## #set ($tablename = "DYNAMIC_BASKET")
+## #set ($cols_isKey = {"EVENT_ID":true, "BASKET_ID":true, "INSTANCE":true, "IMPACTED_AMOUNT":false, "EXPIRATION_DATE":false, "REMAINING_AMOUNT":false, "OFFER_CODE":false, "CALL_START":false})
+## #set ($cols_types = {"EVENT_ID":"DECIMAL(38)", "BASKET_ID":"VARCHAR(8)", "INSTANCE":"INTEGER","IMPACTED_AMOUNT":"DECIMAL(15,6)", "EXPIRATION_DATE":"TIMESTAMP", "REMAINING_AMOUNT":"DECIMAL", "OFFER_CODE":"VARCHAR(20)", "CALL_START":"TIMESTAMP"})
+--
+-- Clear ${tablename}
+--
+DROP TABLE IF EXISTS ${tablename}_AO CASCADE;
+DROP EXTERNAL TABLE IF EXISTS ${tablename}_EXT;
+DROP VIEW IF EXISTS ${tablename}_VIEW;
