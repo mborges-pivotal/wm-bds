@@ -19,6 +19,8 @@ The assumption is that the daily data sets are provided as CSV files. We use 2 e
 
 In order to simplifly the use of the table, we have created the view, *dynamic_basket*, that hides old rows and the control fields.
 
+We have created a program to generate the necessary artifacts for implementing the delta processing for any Database table that is accessible via JDBC. For detail information see the [wm.util](https://github.com/mborges-pivotal/wm-bds/tree/master/wm.util) folder.
+
 ## How it works
 The idea is quite simple. We do a full join between the view and the external table checking the md5 hash result of the values and with 3 simple assumption we can infer deletes, updates and inserts. We join based on the columns that represent an unique row or a primary key.
 
