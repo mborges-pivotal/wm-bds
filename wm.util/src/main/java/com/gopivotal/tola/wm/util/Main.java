@@ -10,9 +10,10 @@ package com.gopivotal.tola.wm.util;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
+import java.io.Writer;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
@@ -31,6 +32,8 @@ import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
 import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Generates ELT artifacts
@@ -43,9 +46,10 @@ import org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader;
  *
  */
 public class Main {
+	
+	private final static Logger logger = LoggerFactory.getLogger(Main.class); 
 
 	private static Map<String, String> typeMap = null;
-	private static final long serialVersionUID = 1L;
 	private static Map<String, String> tablePk = null;
 	private static Map<String, String> appProps = null;
 
@@ -53,8 +57,9 @@ public class Main {
 	 * Main - generate delta scripts
 	 * 
 	 * @param args - T=tables, L=load, C=clear, A=all (default)
+	 * @throws IOException 
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 
 		/* Used for troubleshooting input files
 		 * try { checkFile(new
@@ -69,7 +74,9 @@ public class Main {
 			arg = args[0].toUpperCase().charAt(0);
 			if (args.length > 1) {
 				argTablename = args[1];
+				logger.info("Generating script for '{}' table",argTablename);
 			}
+			logger.info("Generation '{}' type",arg);
 		}
 
 		/* first, get and initialize an engine */
@@ -80,12 +87,18 @@ public class Main {
 
 		ve.init();
 
+		FileWriter wClear = new FileWriter("target/clear.sql");
+		FileWriter wLoad = new FileWriter("target/load.sql");
+		FileWriter wTables = new FileWriter("target/tables.sql");
+				
 		// Loop to all the tables
 		for (String tableName : tablePk.keySet()) {
 			
 			if (argTablename != null && !argTablename.equalsIgnoreCase(tableName)) {
 				continue;
 			}
+			
+			logger.info("Processing '{}' table",tableName);
 
 			Map<String, String> colsMap = null;
 			Map<String, Boolean> colsIsKey = null;
@@ -107,21 +120,27 @@ public class Main {
 
 			switch(arg) {
 			case 'C':
-				runTemplate("clear.vm", ve, context);
+				runTemplate(wClear, "clear.vm", ve, context);
 				break;
 			case 'T':
-				runTemplate("tables.vm", ve, context);
+				runTemplate(wTables, "tables.vm", ve, context);
 				break;
 			case 'L':
-				runTemplate("load.vm", ve, context);
+				runTemplate(wLoad, "load.vm", ve, context);
 				break;
 			default:
-				runTemplate("clear.vm", ve, context);
-				runTemplate("tables.vm", ve, context);
-				runTemplate("load.vm", ve, context);
+				runTemplate(wClear, "clear.vm", ve, context);
+				runTemplate(wTables, "tables.vm", ve, context);
+				runTemplate(wLoad, "load.vm", ve, context);
 			}
 
 		} // for each table
+		
+		wClear.close();
+		wLoad.close();
+		wTables.close();
+		
+		logger.info("Files generated.");
 		
 	} // main
 
@@ -223,17 +242,9 @@ public class Main {
 	/**
 	 * Run template
 	 */
-	private static void runTemplate(String template, VelocityEngine ve, VelocityContext context) {
-
-		/* next, get the Template */
-		Template t = ve.getTemplate(template);
-		/* now render the template into a StringWriter */
-		StringWriter writer = new StringWriter();
+	private static void runTemplate(Writer writer, String template, VelocityEngine ve, VelocityContext context) {
+		Template t = ve.getTemplate(template);		
 		t.merge(context, writer);
-
-		/* show the World */
-		System.out.println(writer.toString());
-
 	}
 
 	/**
