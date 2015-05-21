@@ -7,46 +7,32 @@
 
 #parse("macros.vm")
 
---
--- First Load
---
--- INSERT INTO ${tablename}_ao (#@colsList( "#listCols($cols_keys ',')" )#end, NON_KEY_HASH, LOAD_DATE)  
---  SELECT #@colsList( "#listCols($cols_keys ',')" )#end,
---         md5((#@NonKeyColsList( "#listCols($cols_keys '||')" )#end)::text), current_date
---  FROM ${tablename}_ext;
-  
+--\set load_date '\'' 2015-05-20 '\''
+--\set batch_id 1
+
+\echo Loading ${tablename}...
 --
 -- Insert differences - using delta query above
 --
-insert into ${tablename}_AO (#@colsList( "#listCols($cols_keys ',')" )#end, deleted, non_key_hash) 
-  select #@colsList( "#listCols($cols_keys ',')" )#end, deleted, non_key_hash from (  
-  select #@mergeKeys($cols_isKey)#end
-  #foreach ($col in $cols_isKey.keySet())#if(!${cols_isKey.get($col)})b.${col},#end#end
-  (md5 is NULL) as deleted, 
-  coalesce(md5, non_key_hash) as non_key_hash,
-  (non_key_hash not similar to md5) as changed, 
-  (non_key_hash is null) as inserted 
-  from ${tablename}_ao a full outer join (
-  select #@colsList( "#listCols($cols_keys ',')" )#end,
-         md5((#@NonKeyColsList( "#listCols($cols_keys '||')" )#end)::text) as md5
-  from ${tablename}_ext) b 
-  on (#@keyColsList( "#joinKeys($cols_keys)" )#end)) as changes
-where deleted or inserted or changed;
+INSERT INTO ${tablename}_AO (#@colsList( "#listCols($cols_keys ',')" )#end, deleted, non_key_hash, load_date, batch_id) 
+SELECT #@colsList( "#listCols($cols_keys ',')" )#end, deleted, non_key_hash, load_date, batch_id 
+FROM (  
+       SELECT #@mergeKeys($cols_isKey)#end
+              #foreach ($col in $cols_isKey.keySet())#if(!${cols_isKey.get($col)})b.${col},#end#end
+              (md5 is NULL) as deleted, 
+              coalesce(md5, non_key_hash) as non_key_hash,
+              (non_key_hash not similar to md5) as changed, 
+              (non_key_hash is null) as inserted, 
+              date :load_date as load_date, 
+              :batch_id as batch_id  
+       FROM ${tablename}_view a 
+       FULL OUTER JOIN (
+                         SELECT #@colsList( "#listCols($cols_keys ',')" )#end,
+                                md5((#@NonKeyColsList( "#listCols($cols_keys '||')" )#end)::text) as md5
+                         FROM ${tablename}_ext
+                       ) b 
+       ON (#@keyColsList( "#joinKeys($cols_keys)" )#end)
+     ) 
+AS changes
+WHERE deleted or inserted or changed;
 
-##
-## merge the keys from internal to external table
-##
-#macro(mergeKeys $cols_key)
-  #foreach( $col in $cols_key.keySet()) 
-#if(${cols_isKey.get($col)})
-coalesce(a.${col},b.${col}) as ${col}, 
-#end
-  #end
-#end
-
-##
-## join columns
-##
-#macro(joinKeys $cols_map)
-#foreach($key in $cols_map)a.${key}=b.${key}#if($foreach.hasNext) and #end#end
-#end

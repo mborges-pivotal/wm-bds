@@ -4,6 +4,14 @@
 
 #parse("macros.vm")
 
+##
+## HACK to avoid gpfdist conflict for ar_rosvc*.csv with ar_rosvcex_132A.csv
+##
+ #set($suffix = "")
+#if($tablename == "ar_rosvc")
+  #set($suffix = "_")
+#end
+
 --
 -- Append only table
 --
@@ -13,7 +21,8 @@ CREATE TABLE ${tablename}_AO
       DELETED          BOOLEAN NOT NULL DEFAULT FALSE,
       INSERT_ID        SERIAL NOT NULL,
       NON_KEY_HASH     VARCHAR(32) NOT NULL,
-      LOAD_DATE        DATE DEFAULT current_date
+      LOAD_DATE        DATE DEFAULT current_date,
+      BATCH_ID         BIGINT
    )
 WITH (appendonly=true, COMPRESSTYPE=QUICKLZ)
 DISTRIBUTED RANDOMLY
@@ -27,7 +36,7 @@ CREATE EXTERNAL TABLE ${tablename}_EXT
 #@printCols($cols_types)#end
 
    )
-LOCATION ('gpfdist://phd3:7171/${tablename}*.csv')
+LOCATION ('gpfdist://${address}/${tablename}${suffix}*.csv')
 FORMAT 'text' (delimiter E'|' null '' HEADER)
 LOG ERRORS INTO ERR_WM
 SEGMENT REJECT LIMIT 10 ROWS
@@ -45,12 +54,3 @@ FROM    (
         ) AS SUB
 WHERE ROWNUM = 1 AND NOT DELETED; 
 
-##
-## table column definitions
-##
-#macro(printCols $cols_map)
-  #foreach( $key in $cols_map.keySet()) 
-${key}   ${cols_map.get($key)}#if($foreach.hasNext),
-#end
-  #end
-#end

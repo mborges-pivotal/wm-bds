@@ -26,6 +26,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 
 import org.apache.velocity.Template;
 import org.apache.velocity.VelocityContext;
@@ -56,7 +57,7 @@ public class Main {
 	/**
 	 * Main - generate delta scripts
 	 * 
-	 * @param args - T=tables, L=load, C=clear, A=all (default)
+	 * @param args - T=tables, L=load, C=clear, A=audit, D=All (default)
 	 * @throws IOException 
 	 */
 	public static void main(String[] args) throws IOException {
@@ -68,16 +69,19 @@ public class Main {
 		 * Auto-generated catch block e1.printStackTrace(); } System.exit(0);
 		 */
 		
+		logger.info("JDBC Properties '{}'",appProps);
+		logger.info("Tables '{}'", tablePk.keySet());
+
 		String argTablename = null;
-		char arg = 'B';
+		char arg = 'D';
 		if (args.length > 0) {
 			arg = args[0].toUpperCase().charAt(0);
 			if (args.length > 1) {
 				argTablename = args[1];
 				logger.info("Generating script for '{}' table",argTablename);
 			}
-			logger.info("Generation '{}' type",arg);
 		}
+		logger.info("Generation '{}' type",arg);
 
 		/* first, get and initialize an engine */
 		VelocityEngine ve = new VelocityEngine();
@@ -88,6 +92,7 @@ public class Main {
 		ve.init();
 
 		FileWriter wClear = new FileWriter("target/clear.sql");
+		FileWriter wAudit = new FileWriter("target/audit.sql");
 		FileWriter wLoad = new FileWriter("target/load.sql");
 		FileWriter wTables = new FileWriter("target/tables.sql");
 				
@@ -117,8 +122,12 @@ public class Main {
 			context.put("tablename", tableName);
 			context.put("cols_isKey", colsIsKey);
 			context.put("cols_types", colsMap);
+			context.put("address", String.format("%s:%s", appProps.get("gpfdist_hostname"),appProps.get("gpfdist_port")));
 
 			switch(arg) {
+			case 'A':
+				runTemplate(wAudit, "audit.vm", ve, context);
+				break;
 			case 'C':
 				runTemplate(wClear, "clear.vm", ve, context);
 				break;
@@ -132,10 +141,12 @@ public class Main {
 				runTemplate(wClear, "clear.vm", ve, context);
 				runTemplate(wTables, "tables.vm", ve, context);
 				runTemplate(wLoad, "load.vm", ve, context);
+				runTemplate(wAudit, "audit.vm", ve, context);
 			}
 
 		} // for each table
 		
+		wAudit.close();
 		wClear.close();
 		wLoad.close();
 		wTables.close();
@@ -290,7 +301,7 @@ public class Main {
 			}
 		};
 
-		tablePk = new HashMap<String, String>();
+		tablePk = new TreeMap<String, String>();
 		appProps = new HashMap<String, String>();
 		try {
 			loadProps("/tables.properties", tablePk);

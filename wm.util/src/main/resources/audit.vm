@@ -1,0 +1,79 @@
+##
+## This template generates the load script for the table. We can just use the 
+##
+## The variables below helps you test the template 
+## #set ($tablename = "dynamic_basket")
+## #set ($cols_isKey = {"EVENT_ID":true, "BASKET_ID":true, "INSTANCE":true, "IMPACTED_AMOUNT":false, "EXPIRATION_DATE":false, "REMAINING_AMOUNT":false, "OFFER_CODE":false, "CALL_START":false})
+
+#parse("macros.vm")
+
+\echo Loading ${tablename}...
+
+--
+-- List of batches for the table
+--
+SELECT DISTINCT batch_id, COUNT(*), load_date 
+FROM ${tablename}_ao group by batch_id, load_date;
+
+--\set batch_id_curr 2
+--\set batch_id_prior 1
+
+--
+-- Count differences
+--
+SELECT batch_id,
+       load_date,
+       sum(deleted::int) as deleted, 
+       sum(changed::int) as changed, 
+       sum(inserted::int) as inserted
+FROM (  
+       SELECT #@mergeKeys($cols_isKey)#end
+              deleted, 
+              (non_key_hash not similar to md5) as changed, 
+              (md5 is null) as inserted, 
+              load_date, 
+              batch_id
+       FROM ${tablename}_ao a 
+       FULL OUTER JOIN (
+                         SELECT #@keyColsList( "#listCols($cols_keys ',')" )#end, 
+                                non_key_hash as md5
+                         FROM ${tablename}_ao
+                         WHERE batch_id = :batch_id_prior
+                       ) b 
+       ON (#@keyColsList( "#joinKeys($cols_keys)" )#end) 
+       WHERE batch_id = :batch_id_curr
+     ) 
+AS changes
+WHERE deleted or inserted or changed
+GROUP BY batch_id, load_date;
+
+--
+-- Show differences
+--
+SELECT batch_id,
+       load_date,
+       #@keyColsList( "#listCols($cols_keys ',')" )#end, 
+       deleted, 
+       changed, 
+       inserted
+FROM (  
+       SELECT #@mergeKeys($cols_isKey)#end
+              deleted, 
+              (non_key_hash not similar to md5) as changed, 
+              (non_key_hash is null) as inserted, 
+              load_date, 
+              batch_id
+       FROM ${tablename}_ao a 
+       FULL OUTER JOIN (
+                         SELECT #@keyColsList( "#listCols($cols_keys ',')" )#end, 
+                                non_key_hash as md5
+                         FROM ${tablename}_ao
+                         WHERE batch_id = :batch_id_prior
+                       ) b 
+       ON (#@keyColsList( "#joinKeys($cols_keys)" )#end) 
+       WHERE batch_id = :batch_id_curr
+     ) 
+AS changes
+WHERE deleted or inserted or changed;
+
+

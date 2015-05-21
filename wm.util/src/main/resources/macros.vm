@@ -1,4 +1,31 @@
 ##
+## table column definitions
+##
+#macro(printCols $cols_map)
+  #foreach( $key in $cols_map.keySet()) 
+${key}   ${cols_map.get($key)}#if($foreach.hasNext),
+#end
+  #end
+#end
+
+##
+## merge the keys from internal to external table
+##
+#macro(mergeKeys $cols_key)
+#foreach( $col in $cols_key.keySet()) 
+#if(${cols_isKey.get($col)})coalesce(a.${col},b.${col}) as ${col},#end
+#end
+
+#end
+
+##
+## join columns
+##
+#macro(joinKeys $cols_map)
+#foreach($key in $cols_map)a.${key}=b.${key}#if($foreach.hasNext) and #end#end
+#end
+
+##
 ## columns list
 ##
 #macro(listCols $cols_map $delimeter)

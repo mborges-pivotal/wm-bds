@@ -5,5 +5,5 @@
 -- Clear ${tablename}
 --
 DROP TABLE IF EXISTS ${tablename}_AO CASCADE;
-DROP EXTERNAL TABLE IF EXISTS ${tablename}_EXT;
-DROP VIEW IF EXISTS ${tablename}_VIEW;
+DROP EXTERNAL TABLE IF EXISTS ${tablename}_EXT CASCADE;
+--DROP VIEW IF EXISTS ${tablename}_VIEW;
