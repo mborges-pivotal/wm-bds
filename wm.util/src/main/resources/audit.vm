@@ -23,6 +23,7 @@ FROM ${tablename}_ao group by batch_id, load_date;
 --
 SELECT batch_id,
        load_date,
+       count(*),
        sum(deleted::int) as deleted, 
        sum(changed::int) as changed, 
        sum(inserted::int) as inserted

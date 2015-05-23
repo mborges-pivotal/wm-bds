@@ -44,6 +44,8 @@ import org.slf4j.LoggerFactory;
  *      template-engine.html
  * 
  * @author mborges
+ * 
+ * @deprecated - Converted into BootApp
  *
  */
 public class Main {
@@ -60,15 +62,8 @@ public class Main {
 	 * @param args - T=tables, L=load, C=clear, A=audit, D=All (default)
 	 * @throws IOException 
 	 */
-	public static void main(String[] args) throws IOException {
+	public static void main2(String[] args) throws IOException {
 
-		/* Used for troubleshooting input files
-		 * try { checkFile(new
-		 * File("/Users/mborges/Work/POCs/wm-bds/wm/data/opt",
-		 * "MMB_ar_slxtr.csv")); } catch (IOException e1) { // TODO
-		 * Auto-generated catch block e1.printStackTrace(); } System.exit(0);
-		 */
-		
 		logger.info("JDBC Properties '{}'",appProps);
 		logger.info("Tables '{}'", tablePk.keySet());
 
@@ -155,37 +150,6 @@ public class Main {
 		
 	} // main
 
-	/**
-	 * Check input file
-	 */
-	private static void checkFile(File fin) throws IOException {
-		// Construct BufferedReader from FileReader
-		BufferedReader br = new BufferedReader(new FileReader(fin));
-
-		List<String> cols = new ArrayList<String>();
-
-		String line = null;
-		int count = 0;
-		while ((line = br.readLine()) != null) {
-			System.out.println(line);
-
-			// ParseHeader
-			if (count == 0) {
-				cols.addAll(Arrays.asList(line.split("\\|")));
-				System.out.printf("%d header columns\n", cols.size());
-			} else {
-				String[] values = line.split("\\|");
-				System.out.printf("%d columns\n", values.length);
-				for (int i = 0; i < cols.size(); i++) {
-					System.out.printf("%s -> '%s'\n", cols.get(i), values[i]);
-				}
-			}
-
-			count++;
-		}
-
-		br.close();
-	}
 
 	/**
 	 * get Table information
@@ -197,7 +161,7 @@ public class Main {
 	private static Map<String, String> getTable(String tableName)
 			throws SQLException {
 
-		String fixSizeType = "BIGINT,TIMESTAMP,DATE";
+		String fixedSizeType = appProps.get("fixed_size_type");
 
 		Connection conn = DriverManager.getConnection(
 				appProps.get("jdbc_url"), appProps.get("username"), appProps.get("password"));
@@ -214,7 +178,7 @@ public class Main {
 			String colType = typeMap(rs.getString("TYPE_NAME").toUpperCase());
 			StringBuffer colTypeSb = new StringBuffer(colType);
 
-			if (fixSizeType.indexOf(colType) == -1) {
+			if (fixedSizeType.indexOf(colType) == -1) {
 				colTypeSb.append('(');
 				colTypeSb.append(rs.getString("COLUMN_SIZE"));
 				if (decimalDigits != null && !decimalDigits.equals("0")) {

@@ -2,8 +2,15 @@
 .DS_Store
 
 # Eclipse Files
+.settings/*
 */.settings
 .metadata
 
 # Maven build directories
 */target
+
+wm.xd/bin/exit-status
+wm.xd/bin/gpfdist.log
+wm.xd/bin/pidfile
+
+wm/
