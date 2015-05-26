@@ -5,8 +5,9 @@ FP=/home/gpadmin/wm-bds/wm/data/pivotal_files_050515
 echo ""
 echo ""
 
-if [ "$#" > 0 ]; then
+if [ "$#" -eq 1 ]; then
   FP=$1
+  echo "Parameters: $#"
 fi
 
 echo ""

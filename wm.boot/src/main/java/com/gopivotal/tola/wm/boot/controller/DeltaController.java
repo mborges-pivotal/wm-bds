@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gopivotal.tola.wm.boot.model.Batch;
+import com.gopivotal.tola.wm.boot.model.BatchDetail;
+import com.gopivotal.tola.wm.boot.model.LoadError;
 import com.gopivotal.tola.wm.boot.model.Table;
 import com.gopivotal.tola.wm.boot.repo.TableRepository;
 
@@ -39,16 +41,28 @@ public class DeltaController {
 		return "Greetings from WM Boot!";
 	}
 	
-	@RequestMapping("batch")
-	public List<Batch> getBatch(@RequestParam("table") String table, @RequestParam("prior") int batchIdPrior, @RequestParam("curr") int batchIdCurrent) {
-		logger.info("Get batches for table {} prior {} current {}", table, batchIdPrior, batchIdCurrent);
-		return tables.getBatches(table, batchIdPrior, batchIdCurrent);
+	@RequestMapping("batches")
+	public List<Batch> getBatches(@RequestParam("table") String table) {
+		logger.info("Get batch for table {}", table);
+		return tables.getBatches(table);
 	}
 
+	@RequestMapping("batch")
+	public BatchDetail getBatch(@RequestParam("table") String table, @RequestParam("prior") int batchIdPrior, @RequestParam("curr") int batchIdCurrent) {
+		logger.info("Get batch for table {} prior {} current {}", table, batchIdPrior, batchIdCurrent);
+		return tables.getBatch(table, batchIdPrior, batchIdCurrent);
+	}
+	
 	@RequestMapping("tables")
 	public List<Table> getTables() {
 		logger.info("Get tables");
 		return tables.getTables();
+	}
+
+	@RequestMapping("errors")
+	public List<LoadError> getErrors() {
+		logger.info("Get Errors");
+		return tables.getErrors();
 	}
 
 }

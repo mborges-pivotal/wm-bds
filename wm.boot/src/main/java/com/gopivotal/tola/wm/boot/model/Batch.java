@@ -15,18 +15,13 @@ public class Batch {
 	public long id;
 	public Date date;
 	public long count;
-	public long deleted;
-	public long updated;
-	public long inserted;
-	
-	public Batch(String tableName, long id, Date date, long count, long deleted, long updated, long inserted) {
+
+	public Batch(String tableName, long id, Date date, long count) {
 		this.tableName = tableName;
 		this.id = id;
 		this.date = date;
 		this.count = count;
-		this.deleted = deleted;
-		this.updated = updated;
-		this.inserted = inserted;
 	}
+	
 
 }

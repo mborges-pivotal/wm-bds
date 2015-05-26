@@ -7,13 +7,13 @@
 
 #parse("macros.vm")
 
-\echo Loading ${tablename}...
-
 --
 -- List of batches for the table
 --
 SELECT DISTINCT batch_id, COUNT(*), load_date 
 FROM ${tablename}_ao group by batch_id, load_date;
+-- END
+
 
 --\set batch_id_curr 2
 --\set batch_id_prior 1
@@ -47,6 +47,7 @@ FROM (
 AS changes
 WHERE deleted or inserted or changed
 GROUP BY batch_id, load_date;
+-- END
 
 --
 -- Show differences
@@ -61,7 +62,7 @@ FROM (
        SELECT #@mergeKeys($cols_isKey)#end
               deleted, 
               (non_key_hash not similar to md5) as changed, 
-              (non_key_hash is null) as inserted, 
+              (md5 is null) as inserted,  
               load_date, 
               batch_id
        FROM ${tablename}_ao a 
@@ -76,5 +77,6 @@ FROM (
      ) 
 AS changes
 WHERE deleted or inserted or changed;
+-- END
 
 

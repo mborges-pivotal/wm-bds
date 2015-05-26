@@ -18,7 +18,9 @@ import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
 import org.springframework.stereotype.Component;
 
+import com.gopivotal.tola.wm.boot.model.LoadError;
 import com.gopivotal.tola.wm.boot.model.Batch;
+import com.gopivotal.tola.wm.boot.model.BatchDetail;
 import com.gopivotal.tola.wm.boot.model.Table;
 
 /**
@@ -32,6 +34,10 @@ public class TableRepository {
 
 	@Autowired
 	private JdbcTemplate jdbc;
+	
+	//ERRORS
+	
+	//BATCH RECORDS
 
 	@SuppressWarnings("unchecked")
 	public List<Table> getTables() {
@@ -43,23 +49,65 @@ public class TableRepository {
 		} catch (MetaDataAccessException e) {
 			System.out.println(e);
 		}
-		throw new Error("Failed to retrieve tables");
+		throw new java.lang.Error("Failed to retrieve tables");
 	}
 
-	public List<Batch> getBatches(String table, int batchIdPrior, int batchIdCurrent ) {
+	/**
+	 * getErrors
+	 * @return
+	 */
+	public List<LoadError> getErrors() {
+		
+		String sql = String.format("select to_char(cmdtime, 'DD Mon YYYY HH24:MI:SS') as cmdtime,count(*),filename from err_wm group by cmdtime,filename");
+		
+		List<LoadError> errors = new ArrayList<LoadError>();
+		List<Map<String, Object>> rows = jdbc.queryForList(sql);
+		for (Map<String, Object> row : rows) {
+			LoadError error = new LoadError((String)row.get("cmdtime"), (Long) row.get("count"), (String)row.get("filename"));
+			errors.add(error);
+		}
+
+		return errors;
+	}
+	
+	
+	/**
+	 * getBatches - all batch runs for a table
+	 * @param table
+	 * @return
+	 */
+	public List<Batch> getBatches(String table) {
+		
+		String sql = String.format("SELECT DISTINCT batch_id, COUNT(*), load_date FROM %s group by batch_id, load_date", table);
+		
 		List<Batch> batches = new ArrayList<Batch>();
-		List<Map<String, Object>> rows = jdbc.queryForList(sql, batchIdPrior, batchIdCurrent);
+		List<Map<String, Object>> rows = jdbc.queryForList(sql);
 		for (Map<String, Object> row : rows) {
 			Batch batch = new Batch(table, (Long) row.get("batch_id"),
-					(Date) row.get("load_date"), (Long) row.get("count"),
-					(Long) row.get("deleted"), (Long) row.get("updated"),
-					(Long) row.get("inserted"));
+					(Date) row.get("load_date"), (Long) row.get("count"));
 			batches.add(batch);
 		}
 
 		return batches;
 	}
 
+	/**
+	 * getBatch - stats for a batch run
+	 * @param table
+	 * @param batchIdPrior
+	 * @param batchIdCurrent
+	 * @return
+	 */
+	public BatchDetail getBatch(String table, int batchIdPrior, int batchIdCurrent ) {
+		List<Map<String, Object>> rows = jdbc.queryForList(sql, batchIdPrior, batchIdCurrent);
+		Map<String, Object> row = rows.get(0);
+		BatchDetail batch = new BatchDetail(table, (Long) row.get("batch_id"),
+					(Date) row.get("load_date"), (Long) row.get("count"),
+					(Long) row.get("deleted"), (Long) row.get("updated"),
+					(Long) row.get("inserted"));
+		return batch;
+	}
+	
 	private static String sql = "SELECT batch_id,"
 			+ "   load_date,"
 			+ "       count(*),"
