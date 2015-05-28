@@ -36,6 +36,11 @@ public class DeltaController {
 	@Autowired
 	private TableRepository tables;
 	
+	// no args constructor
+	public DeltaController() {
+		
+	}
+	
 	@RequestMapping("/")
 	public String index() {
 		return "Greetings from WM Boot!";
@@ -64,5 +69,6 @@ public class DeltaController {
 		logger.info("Get Errors");
 		return tables.getErrors();
 	}
-
+	
+	
 }

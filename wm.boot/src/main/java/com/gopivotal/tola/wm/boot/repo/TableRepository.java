@@ -7,8 +7,11 @@
  */
 package com.gopivotal.tola.wm.boot.repo;
 
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,10 +21,14 @@ import org.springframework.jdbc.support.JdbcUtils;
 import org.springframework.jdbc.support.MetaDataAccessException;
 import org.springframework.stereotype.Component;
 
+import scala.annotation.meta.param;
+
 import com.gopivotal.tola.wm.boot.model.LoadError;
 import com.gopivotal.tola.wm.boot.model.Batch;
 import com.gopivotal.tola.wm.boot.model.BatchDetail;
 import com.gopivotal.tola.wm.boot.model.Table;
+import com.gopivotal.tola.wm.util.service.TemplateService;
+import com.gopivotal.tola.wm.util.service.UtilService;
 
 /**
  * TableRepository
@@ -34,6 +41,11 @@ public class TableRepository {
 
 	@Autowired
 	private JdbcTemplate jdbc;
+	
+	@Autowired
+	private TemplateService templateService;
+	
+	private Map<String, Map<String,String>> dmlCache = new HashMap<String, Map<String,String>>();
 	
 	//ERRORS
 	
@@ -99,7 +111,20 @@ public class TableRepository {
 	 * @return
 	 */
 	public BatchDetail getBatch(String table, int batchIdPrior, int batchIdCurrent ) {
+		
+		// hack
+		if (table.toUpperCase().endsWith("_AO")) {
+			table = table.substring(0,table.length()-3);
+		}
+		
+		String sql = getQuery(table, "COUNT_DIFFERENCES");
+		
 		List<Map<String, Object>> rows = jdbc.queryForList(sql, batchIdPrior, batchIdCurrent);
+		
+		if (rows.size() <= 0) {
+			return null;
+		}
+		
 		Map<String, Object> row = rows.get(0);
 		BatchDetail batch = new BatchDetail(table, (Long) row.get("batch_id"),
 					(Date) row.get("load_date"), (Long) row.get("count"),
@@ -108,31 +133,31 @@ public class TableRepository {
 		return batch;
 	}
 	
-	private static String sql = "SELECT batch_id,"
-			+ "   load_date,"
-			+ "       count(*),"
-			+ "       sum(deleted::int) as deleted, "
-			+ "       sum(changed::int) as updated, "
-			+ "       sum(inserted::int) as inserted "
-			+ "FROM ("
-			+ "       SELECT coalesce(a.relative_record_id,b.relative_record_id) as relative_record_id,coalesce(a.library_nm,b.library_nm) as library_nm,coalesce(a.network_addr,b.network_addr) as network_addr,coalesce(a.location_nm,b.location_nm) as location_nm,"
-			+ "              deleted, "
-			+ "              (non_key_hash not similar to md5) as changed,"
-			+ "              (md5 is null) as inserted,"
-			+ "              load_date,"
-			+ "              batch_id "
-			+ "       FROM ar_cmpny_ao a "
-			+ "       FULL OUTER JOIN ("
-			+ "                         SELECT  relative_record_id, library_nm, network_addr, location_nm,"
-			+ "                                non_key_hash as md5"
-			+ "                         FROM ar_cmpny_ao"
-			+ "                         WHERE batch_id = ?"
-			+ // :batch_id_prior
-			"                       ) b "
-			+ "       ON (a.relative_record_id=b.relative_record_id and a.library_nm=b.library_nm and a.network_addr=b.network_addr and a.location_nm=b.location_nm) "
-			+ "       WHERE batch_id = ?"
-			+ // :batch_id_curr
-			"     ) " + "AS changes " + "WHERE deleted or inserted or changed "
-			+ "GROUP BY batch_id, load_date;";
+	////////////////////////////////////////////////
+	
+	/**
+	 * getDML for table audit
+	 * 
+	 * @param tableName
+	 * @return
+	 */
+	private String getQuery(String tableName, String queryName) {
+		
+		Map<String, String> tblQueries = dmlCache.get(tableName);
+		if(tblQueries == null) {
+			Writer w = new StringWriter();
+			templateService.assignContext(tableName);
+			templateService.runTemplate(w, "audit.vm");		
+			tblQueries = templateService.parseQueries(w.toString());
+			dmlCache.put(tableName, tblQueries);
+		}
+		
+		if (tblQueries.containsKey(queryName)) {
+			return tblQueries.get(queryName);
+		}
+		
+		throw new Error(String.format("Didn't find query '%s' for table '%s'", queryName, tableName));
+	}
+	
 
 }

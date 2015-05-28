@@ -12,8 +12,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -22,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import com.gopivotal.tola.wm.util.BootApp;
 
 /**
  * Util - utilities to check input files
@@ -64,6 +65,7 @@ public class UtilService {
 		}
 	}
 	
+
 	
 	/**
 	 * Check input file
@@ -96,6 +98,6 @@ public class UtilService {
 
 		br.close();
 	}
-
+	
 
 }

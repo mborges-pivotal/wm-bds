@@ -8,7 +8,7 @@
 #parse("macros.vm")
 
 --
--- List of batches for the table
+-- LIST_BATCHES
 --
 SELECT DISTINCT batch_id, COUNT(*), load_date 
 FROM ${tablename}_ao group by batch_id, load_date;
@@ -19,13 +19,13 @@ FROM ${tablename}_ao group by batch_id, load_date;
 --\set batch_id_prior 1
 
 --
--- Count differences
+-- COUNT_DIFFERENCES
 --
 SELECT batch_id,
        load_date,
        count(*),
        sum(deleted::int) as deleted, 
-       sum(changed::int) as changed, 
+       sum(changed::int) as updated, 
        sum(inserted::int) as inserted
 FROM (  
        SELECT #@mergeKeys($cols_isKey)#end
@@ -50,13 +50,13 @@ GROUP BY batch_id, load_date;
 -- END
 
 --
--- Show differences
+-- SHOW_DIFFERENCES
 --
 SELECT batch_id,
        load_date,
        #@keyColsList( "#listCols($cols_keys ',')" )#end, 
        deleted, 
-       changed, 
+       updated, 
        inserted
 FROM (  
        SELECT #@mergeKeys($cols_isKey)#end

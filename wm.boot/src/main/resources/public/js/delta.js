@@ -1,9 +1,9 @@
-/**
- * 
- */
 
 var app = angular.module('myApp', [ 'ngGrid','ui.bootstrap']);
 
+/**
+ * homeCtrl
+ */
 app.controller('homeCtrl', function($scope, $http) {
 
 	$http.get('/tables/').success(function(data) {
@@ -14,7 +14,7 @@ app.controller('homeCtrl', function($scope, $http) {
 
 	$scope.mySelections = [];
 
-	$scope.gridOptions = {
+	$scope.gridTable = {
 		data : 'displayTables',
 		selectedItems : $scope.mySelections,
 		multiSelect : false,
@@ -38,11 +38,11 @@ app.controller('homeCtrl', function($scope, $http) {
 				})
 			});
 		}
-	}; //gridOptions
+	}; //gridTables
 	
 	$scope.batchSelections = [];
 
-	$scope.gridOptions2 = {
+	$scope.gridBatches = {
 			data : 'batches',
 			selectedItems : $scope.batchSelections,
 			multiSelect : false,
@@ -54,20 +54,23 @@ app.controller('homeCtrl', function($scope, $http) {
 			               {field : 'count', displayName : 'Count', width : 80}],
 			afterSelectionChange : function() {
 				angular.forEach($scope.batchSelections, function(item) {
-					console.log("batch:"+item.id);
-					$http({url: '/batch', method: 'GET', params: {table:$scope.tableName, prior:1, curr:2}}).success(function(data) {
-					//$http({url: '/batches', method: 'GET', params: {table:item.name}}).success(function(data) {
-						console.log(data)
-						$scope.batch = data;
-					})
-				});
-			}
+				console.log("batch:"+item.id);
+				$http({url: '/batch', method: 'GET', params: {table:$scope.tableName, prior:1, curr:2}}).success(function(data) {
+					console.log(data)
+					$scope.batch = data;
+					
+				})
+			});
+		}
 
-	}; //gridOptions2
+	}; //gridBatches
 	
 
 }) // app.controller
 
+/**
+ * TabsDemoCtrl
+ */
 app.controller('TabsDemoCtrl', function ($scope, $window, $http) {
 		
 	$http.get('/errors/').success(function(data) {

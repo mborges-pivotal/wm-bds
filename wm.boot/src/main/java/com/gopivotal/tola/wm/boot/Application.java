@@ -7,11 +7,11 @@
  */
 package com.gopivotal.tola.wm.boot;
 
-import java.util.Arrays;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.context.annotation.ComponentScan;
+
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
@@ -20,6 +20,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * @author mborges
  *
  */
+@ComponentScan({"com.gopivotal.tola.wm.boot","com.gopivotal.tola.wm.util.service"})
 @SpringBootApplication
 public class Application {
 	

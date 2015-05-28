@@ -2,26 +2,16 @@ package com.gopivotal.tola.wm.util;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Writer;
-import java.sql.SQLException;
-import java.util.Map;
-import java.util.Properties;
-import java.util.TreeMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.Environment;
 
-import com.gopivotal.tola.wm.util.service.TableService;
 import com.gopivotal.tola.wm.util.service.TemplateService;
-import com.gopivotal.tola.wm.util.service.UtilService;
 
 /**
  * Delta generation
@@ -31,24 +21,12 @@ import com.gopivotal.tola.wm.util.service.UtilService;
 public class BootApp implements CommandLineRunner
 {
 	private final static Logger logger = LoggerFactory.getLogger(BootApp.class); 
-	
-	private Map<String, String> tablePk = null;
 
-	@Autowired
-	private UtilService utilService;
-
-	@Autowired
-	private TableService tableService;
 
 	@Autowired
 	private TemplateService templateService;
 
-	@Value("${gpfdist_hostname}") 
-	private String gpfdistHostname;
 
-	@Value("${gpfdist_port}") 
-	private String gpfdistPort;
-	
 	/**
 	 * main - Spring Boot application 
 	 * @param args
@@ -63,17 +41,6 @@ public class BootApp implements CommandLineRunner
 	 */
 	public void run(String... args) {
 		
-		tablePk = new TreeMap<String, String>(); 
-		
-		// Load list of tables with key definitions
-		try {
-			utilService.loadProps("/tables.properties", tablePk);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-		logger.info("Tables '{}'", tablePk.keySet());
-
 		String argTablename = null;
 		
 		// Parsing args
@@ -87,8 +54,6 @@ public class BootApp implements CommandLineRunner
 		}
 		logger.info("Generation '{}' type",arg);
 		
-		logger.info("gpfdist host {} and port {}",gpfdistHostname, gpfdistPort);
-
 		
 		// Looping through defined tables and processing scripts
 		FileWriter wClear = null;
@@ -105,13 +70,13 @@ public class BootApp implements CommandLineRunner
 		}
 				
 		// Loop to all the tables
-		for (String tableName : tablePk.keySet()) {
+		for (String tableName : templateService.getTables()) {
 			
 			if (argTablename != null && !argTablename.equalsIgnoreCase(tableName)) {
 				continue;
 			}
 			
-			assignContext(tableName);
+			templateService.assignContext(tableName);
 			processTemplates(arg, wAudit, wClear, wTables, wLoad);
 			
 			
@@ -133,31 +98,6 @@ public class BootApp implements CommandLineRunner
 	// Helper methods
 	///////////////////////////////////
 	
-	/**
-	 * assign the context for the generation
-	 * @param tableName
-	 */
-	private void assignContext(String tableName) {
-		logger.info("Processing '{}' table",tableName);
-
-		Map<String, String> colsMap = null;
-		Map<String, Boolean> colsIsKey = null;
-
-		/* Catalog */
-		try {
-			colsMap = tableService.getTable(tableName);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-		colsIsKey = tableService.mapKeys(colsMap,tablePk.get(tableName));
-
-		templateService.addContext("tablename", tableName);
-		templateService.addContext("cols_isKey", colsIsKey);
-		templateService.addContext("cols_types", colsMap);
-		templateService.addContext("address", String.format("%s:%s", gpfdistHostname,gpfdistPort));
-		
-	}
 	
 	private void processTemplates(char type, Writer wAudit, Writer wClear, Writer wTables, Writer wLoad) {
 		switch(type) {
